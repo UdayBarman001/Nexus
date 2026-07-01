@@ -1,5 +1,7 @@
 package com.Let.s_Code.nexus.controller;
 
+import com.Let.s_Code.nexus.dto.AuthResponse;
+import com.Let.s_Code.nexus.dto.LoginRequest;
 import com.Let.s_Code.nexus.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -17,5 +19,10 @@ public class AuthController {
                                            @RequestParam String role) {
         authService.registerUser(email, password, role);
         return ResponseEntity.ok("User registered successfully!");
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
+        return ResponseEntity.ok(authService.login(request));
     }
 }

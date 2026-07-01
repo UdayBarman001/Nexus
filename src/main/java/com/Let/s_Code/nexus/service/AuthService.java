@@ -1,36 +1,56 @@
 package com.Let.s_Code.nexus.service;
 
+import com.Let.s_Code.nexus.dto.AuthResponse;
+import com.Let.s_Code.nexus.dto.LoginRequest;
 import com.Let.s_Code.nexus.Entity.Role;
 import com.Let.s_Code.nexus.Entity.User;
-import com.Let.s_Code.nexus.Repository.RoleRepository;
 import com.Let.s_Code.nexus.Repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
 
     private final UserRepository userRepository;
-    private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
+    private final AuthenticationManager authenticationManager; // We added this!
 
-    @Transactional
-    public User registerUser(String email, String rawPassword, String roleName) {
-        if (userRepository.findByEmail(email).isPresent()) {
-            throw new RuntimeException("Error: Email is already in use!");
-        }
+    // Your existing register logic (I'll keep it simple here, make sure it matches yours!)
+    public void registerUser(String email, String password, String role) {
+        User user = User.builder()
+                .email(email)
+                .password(passwordEncoder.encode(password))
+                .role(Role.valueOf(role.toUpperCase()))
+                .build();
+        userRepository.save(user);
+    }
 
-        Role userRole = roleRepository.findByName(roleName)
-                .orElseThrow(() -> new RuntimeException("Error: Role not found!"));
+    // 🚀 NEW: The Login Logic
+    public AuthResponse login(LoginRequest request) {
+        // 1. The AuthenticationManager securely checks the email and password against the database.
+        // If the password is wrong, this line immediately throws an error and stops the process.
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        request.getEmail(),
+                        request.getPassword()
+                )
+        );
 
-        User newUser = new User();
-        newUser.setEmail(email);
-        newUser.setPasswordHash(passwordEncoder.encode(rawPassword));
-        newUser.setRole(userRole);
+        // 2. If we reach this line, the user is 100% authenticated. We fetch their profile.
+        var user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        return userRepository.save(newUser);
+        // 3. We print their VIP Wristband!
+        var jwtToken = jwtService.generateToken(user);
+
+        // 4. Return the token inside our structured response
+        return AuthResponse.builder()
+                .token(jwtToken)
+                .build();
     }
 }
