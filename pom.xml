@@ -34,14 +34,14 @@
         </dependency>
 
 <!--        &lt;!&ndash; Spring AI: PgVector + Embedding Model &ndash;&gt;-->
-<!--        <dependency>-->
-<!--            <groupId>org.springframework.ai</groupId>-->
-<!--            <artifactId>spring-ai-starter-vector-store-pgvector</artifactId>-->
-<!--        </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>org.springframework.ai</groupId>-->
-<!--            <artifactId>spring-ai-starter-model-ollama</artifactId> &lt;!&ndash; ✅ Added: provides EmbeddingModel &ndash;&gt;-->
-<!--        </dependency>-->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-vector-store-pgvector</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-model-ollama</artifactId> <!-- ✅ Added: provides EmbeddingModel -->
+        </dependency>
 
         <!-- DB -->
         <dependency>
@@ -65,7 +65,7 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.security</groupId>
-            <artifactId>spring-security-test</artifactId>
+            <artifactId>spring-security-test</artifactId> <!-- ✅ Fixed: correct security test artifact -->
             <scope>test</scope>
         </dependency>
         <dependency>
