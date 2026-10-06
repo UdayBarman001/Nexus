@@ -3,13 +3,18 @@ services:
     image: pgvector/pgvector:pg17
     container_name: nexus-postgres
     environment:
-      POSTGRES_DB: Nexusdb
-      POSTGRES_USER: nexus_user
-      POSTGRES_PASSWORD: nexus_pass
+      POSTGRES_DB: ${POSTGRES_DB:-Nexusdb}
+      POSTGRES_USER: ${POSTGRES_USER:-nexus_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nexus_pass}
     ports:
       - "5432:5432"
     volumes:
       - nexus-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nexus_user} -d ${POSTGRES_DB:-Nexusdb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   ollama:
     image: ollama/ollama
@@ -19,6 +24,53 @@ services:
     volumes:
       - nexus-ollama:/root/.ollama
 
+  minio:
+    image: minio/minio
+    container_name: nexus-minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-nexus_admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-nexus_minio_pass}
+    ports:
+      - "9000:9000"   # S3 API port
+      - "9001:9001"   # Web console port
+    volumes:
+      - nexus-minio:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: nexus-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      POSTGRES_DB: ${POSTGRES_DB:-Nexusdb}
+      DB_USERNAME: ${POSTGRES_USER:-nexus_user}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-nexus_pass}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-nexus_admin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-nexus_minio_pass}
+      MINIO_BUCKET: ${MINIO_BUCKET:-nexus-documents}
+      JWT_SECRET: "${JWT_SECRET:-AAudHgc8scwtJnTUFRCEMQWHvJhWmVRf3KHS0nP4kxf298347109283401928340912}"
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173}
+      CHAT_MODEL: ${CHAT_MODEL:-llama3.2}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-nomic-embed-text}
+
 volumes:
   nexus-pgdata:
   nexus-ollama:
+  nexus-minio:
